@@ -1,4 +1,4 @@
-﻿package com.example.ayahflow.di
+package com.example.ayahflow.di
 
 import android.content.Context
 import com.example.ayahflow.data.local.QuranDatabase
@@ -45,7 +45,7 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val bookmarkRepository: BookmarkRepository by lazy {
-        BookmarkRepository(database.bookmarkDao())
+        BookmarkRepository(context, database.bookmarkDao())
     }
 
     override val userPreferencesRepository: UserPreferencesRepository by lazy {
@@ -54,5 +54,5 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val getAyahUseCase: GetAyahUseCase by lazy { GetAyahUseCase(quranRepository) }
     override val getProgressUseCase: GetProgressUseCase by lazy { GetProgressUseCase(progressRepository) }
-    override val updateProgressUseCase: UpdateProgressUseCase by lazy { UpdateProgressUseCase(progressRepository) }
+    override val updateProgressUseCase: UpdateProgressUseCase by lazy { UpdateProgressUseCase(context, progressRepository) }
 }

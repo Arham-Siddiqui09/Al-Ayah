@@ -1,4 +1,4 @@
-﻿package com.example.ayahflow.ui.reader
+package com.example.ayahflow.ui.reader
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -63,19 +64,36 @@ fun ReaderScreen(
                 .statusBarsPadding()
                 .padding(horizontal = 12.dp)
         ) {
-            // ── Top Bar (Verse of the Day) ───────────────────────────────────
+            val bookmarkedAyahs by viewModel.bookmarkedAyahs.collectAsState(initial = emptyList())
+            val isCurrentBookmarked = bookmarkedAyahs.any { it.globalIndex == currentAyah?.globalIndex }
+
+            //  Top Bar (Verse of the Day) 
             Spacer(Modifier.height(16.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = "Verse of the Day",
-                    fontSize = 24.sp,
+                    fontSize = 26.sp,
                     fontWeight = FontWeight.Bold,
                     color = if (isDark) AyahColors.DarkTextPrimary else AyahColors.GreenPrimary
                 )
+                if (currentAyah != null) {
+                    IconButton(
+                        onClick = {
+                            appViewModel.toggleBookmark(currentAyah!!.globalIndex, isCurrentBookmarked)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isCurrentBookmarked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = "Bookmark",
+                            tint = AyahColors.GreenPrimary,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(16.dp))
@@ -133,7 +151,7 @@ fun ReaderScreen(
                             )
                         }
 
-                        Spacer(Modifier.height(24.dp))
+                      //  Spacer(Modifier.height(24.dp))
 
                         // ── Navigation Buttons ─────────────────────────────────
                         VerseNavigation(
@@ -146,7 +164,7 @@ fun ReaderScreen(
                             modifier    = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(150.dp))
                     }
                 }
             }
