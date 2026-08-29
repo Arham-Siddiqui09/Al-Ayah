@@ -1,50 +1,45 @@
-package com.example.ayahflow.theme
+﻿package com.example.ayahflow.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
+private val AyahLightColors = lightColorScheme(
+    primary          = Color(0xFF164E3D),
+    onPrimary        = Color.White,
+    secondary        = Color(0xFF2F8066),
+    onSecondary      = Color.White,
+    background       = Color(0xFFF7F5EE),
+    onBackground     = Color(0xFF202936),
+    surface          = Color(0xFFFFFDF8),
+    onSurface        = Color(0xFF202936),
+    surfaceVariant   = Color(0xFFF0EDE5),
+    onSurfaceVariant = Color(0xFF687078)
+)
 
-private val LightColorScheme =
-  lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-  )
+private val AyahDarkColors = darkColorScheme(
+    primary          = Color(0xFF4D9E80),
+    onPrimary        = Color(0xFF002117),
+    secondary        = Color(0xFF2F8066),
+    onSecondary      = Color.White,
+    background       = Color(0xFF0E2921),
+    onBackground     = Color(0xFFFFFDF8),
+    surface          = Color(0xFF12382D),
+    onSurface        = Color(0xFFFFFDF8),
+    surfaceVariant   = Color(0xFF163D30),
+    onSurfaceVariant = Color(0xFFAFC4BB)
+)
 
 @Composable
 fun AyahFlowTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // Dynamic color is available on Android 12+
-  dynamicColor: Boolean = true,
-  content: @Composable () -> Unit,
+    darkTheme: Boolean = false,
+    content: @Composable () -> Unit
 ) {
-  val colorScheme =
-    when {
-      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val context = LocalContext.current
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-      }
-      darkTheme -> DarkColorScheme
-      else -> LightColorScheme
-    }
-
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(
+        colorScheme = if (darkTheme) AyahDarkColors else AyahLightColors,
+        typography  = Typography,
+        content     = content
+    )
 }

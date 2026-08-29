@@ -1,170 +1,229 @@
-package com.example.ayahflow.ui.reader
+﻿package com.example.ayahflow.ui.reader
 
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.ayahflow.data.model.AyahEntity
+import com.example.ayahflow.R
+import com.example.ayahflow.data.sync.SyncState
+import com.example.ayahflow.ui.AppViewModel
+import com.example.ayahflow.ui.components.*
+import com.example.ayahflow.ui.design.AyahColors
+import com.example.ayahflow.ui.design.LocalIsDarkMode
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReaderScreen(
     viewModel: ReaderViewModel,
+    appViewModel: AppViewModel,
+    onOpenSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val currentAyah by viewModel.currentAyah.collectAsState()
-    val syncState by viewModel.syncState.collectAsState()
+    val isDark       = LocalIsDarkMode.current
+    val currentAyah  by viewModel.currentAyah.collectAsState()
+    val syncState    by viewModel.syncState.collectAsState()
     val syncProgress by viewModel.syncProgress.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val bookmarkedAyahs by viewModel.bookmarkedAyahs.collectAsState()
 
-    Surface(
-        modifier = modifier.fillMaxSize(),
-        color = Color(0xFFFDFBF7) // Ivory paper color
+    val scope = rememberCoroutineScope()
+    var showBookmarksSheet by remember { mutableStateOf(false) }
+
+    // Top background color based on the screenshot, but adapting to match Journey screen
+    val bg = if (isDark) AyahColors.DarkBg else AyahColors.CreamBg
+
+    BotanicalBackground(
+        isDark = isDark,
+        opacity = if (isDark) 0.12f else 0.20f,
+        modifier = modifier
+            .fillMaxSize()
+            .background(bg)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .padding(horizontal = 12.dp)
         ) {
+            // ── Top Bar (Verse of the Day) ───────────────────────────────────
+            Spacer(Modifier.height(16.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Verse of the Day",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) AyahColors.DarkTextPrimary else AyahColors.GreenPrimary
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+
             when (syncState) {
-                com.example.ayahflow.data.sync.SyncState.NOT_STARTED,
-                com.example.ayahflow.data.sync.SyncState.DOWNLOADING,
-                com.example.ayahflow.data.sync.SyncState.VALIDATING -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.padding(bottom = 24.dp),
-                        color = Color(0xFF1F2937)
-                    )
-                    Text(
-                        text = if (syncState == com.example.ayahflow.data.sync.SyncState.VALIDATING) {
-                            "Validating Quran Data..."
-                        } else {
-                            "Downloading Quran Data... ($syncProgress/114 Surahs)"
-                        },
-                        fontSize = 18.sp,
-                        color = Color(0xFF4B5563),
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = "This will only happen once.",
-                        fontSize = 14.sp,
-                        color = Color(0xFF9CA3AF),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-                com.example.ayahflow.data.sync.SyncState.FAILED -> {
-                    Text(
-                        text = "Failed to download Quran.",
-                        fontSize = 18.sp,
-                        color = Color(0xFFEF4444),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    )
-                    Text(
-                        text = errorMessage ?: "Unknown error",
-                        fontSize = 14.sp,
-                        color = Color(0xFF4B5563),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(bottom = 24.dp)
-                    )
-                    Button(onClick = { viewModel.retrySync() }) {
-                        Text("Retry")
+                SyncState.NOT_STARTED, SyncState.DOWNLOADING, SyncState.VALIDATING -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(40.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        CircularProgressIndicator(color = AyahColors.GreenSecondary)
+                        Spacer(Modifier.height(24.dp))
+                        Text(
+                            text = if (syncState == SyncState.VALIDATING) "Validating Quran Data..." else "Downloading Quran...\n($syncProgress / 114 Surahs)",
+                            fontSize = 16.sp,
+                            textAlign = TextAlign.Center,
+                            color = if (isDark) AyahColors.DarkTextSecondary else AyahColors.TextSecondary
+                        )
                     }
                 }
-                com.example.ayahflow.data.sync.SyncState.COMPLETED -> {
-                    currentAyah?.let { ayah ->
-                        AyahCard(ayah, onNext = { viewModel.nextAyah() }, onPrev = { viewModel.previousAyah() })
-                    } ?: CircularProgressIndicator()
+                SyncState.FAILED -> {
+                    Column(
+                        modifier = Modifier.fillMaxSize().padding(40.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("\u26A0\uFE0F Download Failed", fontSize = 18.sp, color = Color(0xFFD97706))
+                        Spacer(Modifier.height(10.dp))
+                        Text(errorMessage ?: "Unknown error", fontSize = 13.sp, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(24.dp))
+                        Button(onClick = { viewModel.retrySync() }) { Text("Retry") }
+                    }
+                }
+                SyncState.COMPLETED -> {
+                    val ayah = currentAyah
+                    if (ayah == null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = AyahColors.GreenSecondary)
+                        }
+                    } else {
+                        // ── Card Area with Leaves ──────────────────────────────
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // 1. The torn paper card
+                            QuranVerseCard(
+                                ayah = ayah,
+                                isDark = isDark,
+                                modifier = Modifier.fillMaxSize()
+                                    .scale(1.15f)
+                            )
+                        }
+
+                        Spacer(Modifier.height(24.dp))
+
+                        // ── Navigation Buttons ─────────────────────────────────
+                        VerseNavigation(
+                            onPrevious  = { viewModel.previousAyah() },
+                            onNext      = { viewModel.nextAyah() },
+                            onListClick = { showBookmarksSheet = true },
+                            hasPrevious = ayah.globalIndex > 1,
+                            hasNext     = ayah.globalIndex < 6236,
+                            isDark      = isDark,
+                            modifier    = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(24.dp))
+                    }
                 }
             }
         }
     }
-}
 
-@Composable
-fun AyahCard(
-    ayah: AyahEntity,
-    onNext: () -> Unit,
-    onPrev: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight()
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(24.dp),
-                spotColor = Color(0x1A000000)
-            )
-            .clip(RoundedCornerShape(24.dp)),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(32.dp)
-                .fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+    if (showBookmarksSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showBookmarksSheet = false },
+            containerColor = if (isDark) AyahColors.DarkSurface else AyahColors.Surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
-            Text(
-                text = ayah.arabicText,
-                fontSize = 32.sp,
-                lineHeight = 48.sp,
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF1F2937),
-                modifier = Modifier.padding(bottom = 32.dp)
-            )
-
-            Text(
-                text = ayah.translation,
-                fontSize = 18.sp,
-                lineHeight = 28.sp,
-                textAlign = TextAlign.Center,
-                color = Color(0xFF4B5563),
-                modifier = Modifier.padding(bottom = 40.dp)
-            )
-            
-            Divider(color = Color(0xFFE5E7EB), modifier = Modifier.padding(bottom = 16.dp))
-
-            Text(
-                text = "${ayah.surahName} · ${ayah.surahNumber}:${ayah.ayahNumber}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color(0xFF6B7280),
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            
-            Text(
-                text = "${ayah.globalIndex} / 6236",
-                fontSize = 12.sp,
-                color = Color(0xFF9CA3AF)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 32.dp)
             ) {
-                TextButton(onClick = onPrev) {
-                    Text("Previous")
-                }
-                TextButton(onClick = onNext) {
-                    Text("Next")
+                Text(
+                    text = "Liked Ayahs",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isDark) AyahColors.DarkTextPrimary else AyahColors.TextPrimary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                if (bookmarkedAyahs.isEmpty()) {
+                    Text(
+                        text = "You haven't liked any Ayahs yet. Tap the heart icon on the widget to save them here!",
+                        fontSize = 14.sp,
+                        color = if (isDark) AyahColors.DarkTextSecondary else AyahColors.TextSecondary,
+                        modifier = Modifier.padding(vertical = 32.dp),
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(bookmarkedAyahs) { b ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(if (isDark) AyahColors.DarkCard else Color(0xFFF0F2EB), RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        viewModel.jumpToAyah(b.globalIndex)
+                                        showBookmarksSheet = false
+                                    }
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Favorite,
+                                    contentDescription = null,
+                                    tint = AyahColors.GreenPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(Modifier.width(16.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "${b.surahName} ${b.surahNumber}:${b.ayahNumber}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (isDark) AyahColors.DarkTextPrimary else AyahColors.TextPrimary
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        text = b.arabicText,
+                                        fontSize = 16.sp,
+                                        color = if (isDark) AyahColors.DarkTextSecondary else AyahColors.TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -1,4 +1,5 @@
 package com.example.ayahflow.ui.reader
+import kotlinx.coroutines.flow.stateIn
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -17,8 +18,12 @@ class ReaderViewModel(
     private val getAyahUseCase: GetAyahUseCase,
     private val getProgressUseCase: GetProgressUseCase,
     private val updateProgressUseCase: UpdateProgressUseCase,
-    private val syncManager: com.example.ayahflow.data.sync.QuranSyncManager
+    private val syncManager: com.example.ayahflow.data.sync.QuranSyncManager,
+    private val bookmarkRepository: com.example.ayahflow.data.repository.BookmarkRepository
 ) : ViewModel() {
+
+    val bookmarkedAyahs = bookmarkRepository.getBookmarkedAyahs()
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Lazily, emptyList())
 
     private val _currentAyah = MutableStateFlow<AyahEntity?>(null)
     val currentAyah: StateFlow<AyahEntity?> = _currentAyah.asStateFlow()
@@ -75,6 +80,12 @@ class ReaderViewModel(
         }
     }
 
+    fun jumpToAyah(globalIndex: Int) {
+        viewModelScope.launch {
+            updateProgressUseCase(globalIndex)
+        }
+    }
+
     fun previousAyah() {
         viewModelScope.launch {
             val prevIndex = _currentIndex.value - 1
@@ -92,11 +103,12 @@ class ReaderViewModel(
             getAyahUseCase: GetAyahUseCase,
             getProgressUseCase: GetProgressUseCase,
             updateProgressUseCase: UpdateProgressUseCase,
-            syncManager: com.example.ayahflow.data.sync.QuranSyncManager
+            syncManager: com.example.ayahflow.data.sync.QuranSyncManager,
+            bookmarkRepository: com.example.ayahflow.data.repository.BookmarkRepository
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return ReaderViewModel(getAyahUseCase, getProgressUseCase, updateProgressUseCase, syncManager) as T
+                return ReaderViewModel(getAyahUseCase, getProgressUseCase, updateProgressUseCase, syncManager, bookmarkRepository) as T
             }
         }
     }

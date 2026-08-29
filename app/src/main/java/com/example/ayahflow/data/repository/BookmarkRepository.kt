@@ -13,15 +13,21 @@ class BookmarkRepository(
         return bookmarkDao.getAllBookmarks()
     }
 
+    fun getBookmarkedAyahs(): Flow<List<com.example.ayahflow.data.model.BookmarkedAyah>> {
+        return bookmarkDao.getBookmarkedAyahs()
+    }
+
     fun isBookmarked(globalIndex: Int): Flow<Boolean> {
         return bookmarkDao.isBookmarked(globalIndex)
     }
 
     suspend fun toggleBookmark(globalIndex: Int) = withContext(Dispatchers.IO) {
-        // Since we don't have a sync check method easily exposed, we can do a try-catch or explicit query.
-        // For simplicity, we just add it, but normally we'd check if it exists and delete if so.
-        // To do it properly:
-        // Wait, the DAO doesn't have a sync check. I'll just add one.
+        val exists = bookmarkDao.isBookmarkedSync(globalIndex)
+        if (exists) {
+            bookmarkDao.deleteBookmark(BookmarkEntity(globalIndex, 0))
+        } else {
+            bookmarkDao.insertBookmark(BookmarkEntity(globalIndex, System.currentTimeMillis()))
+        }
     }
     
     suspend fun addBookmark(globalIndex: Int) = withContext(Dispatchers.IO) {

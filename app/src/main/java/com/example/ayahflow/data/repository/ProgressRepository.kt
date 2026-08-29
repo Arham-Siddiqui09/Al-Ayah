@@ -7,7 +7,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 
 class ProgressRepository(
-    private val progressDao: ProgressDao
+    private val progressDao: ProgressDao,
+    private val historyRepository: HistoryRepository
 ) {
     fun getProgressFlow(): Flow<ProgressEntity?> {
         return progressDao.getProgress()
@@ -19,6 +20,7 @@ class ProgressRepository(
 
     suspend fun updateProgress(globalIndex: Int, totalAyahsReadIncrement: Int = 1) = withContext(Dispatchers.IO) {
         val current = progressDao.getProgressSync()
+        
         val newTotal = (current?.totalAyahsRead ?: 0) + totalAyahsReadIncrement
         val progress = ProgressEntity(
             currentGlobalIndex = globalIndex,
@@ -26,6 +28,9 @@ class ProgressRepository(
             totalAyahsRead = newTotal
         )
         progressDao.updateProgress(progress)
+        
+        // Unconditionally log the ayah. Duplicate logging on the same day is ignored by SQLite.
+        historyRepository.logAyahRead(globalIndex)
     }
 
     suspend fun resetProgress() = withContext(Dispatchers.IO) {

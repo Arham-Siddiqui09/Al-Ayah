@@ -4,39 +4,36 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.ayahflow.ui.reader.ReaderScreen
-import com.example.ayahflow.ui.reader.ReaderViewModel
 import com.example.ayahflow.theme.AyahFlowTheme
-import androidx.glance.appwidget.updateAll
+import com.example.ayahflow.ui.AppViewModel
+import com.example.ayahflow.ui.design.LocalIsDarkMode
+import com.example.ayahflow.ui.main.MainScreen
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import androidx.glance.appwidget.updateAll
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
-        val appContainer = (application as AyahFlowApplication).container
-        
+
+        val container = (application as AyahFlowApplication).container
+
         setContent {
-            AyahFlowTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    val readerViewModel: ReaderViewModel = viewModel(
-                        factory = ReaderViewModel.provideFactory(
-                            appContainer.getAyahUseCase,
-                            appContainer.getProgressUseCase,
-                            appContainer.updateProgressUseCase,
-                            appContainer.syncManager
-                        )
-                    )
-                    ReaderScreen(
-                        viewModel = readerViewModel,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+            val appViewModel: AppViewModel = viewModel(
+                factory = AppViewModel.Factory(
+                    prefsRepository    = container.userPreferencesRepository,
+                    bookmarkRepository = container.bookmarkRepository
+                )
+            )
+            val isDark by appViewModel.isDarkMode.collectAsState()
+
+            AyahFlowTheme(darkTheme = isDark) {
+                CompositionLocalProvider(LocalIsDarkMode provides isDark) {
+                    MainScreen(appViewModel = appViewModel)
                 }
             }
         }
@@ -44,8 +41,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-            com.example.ayahflow.ui.widget.AyahWidget().updateAll(this@MainActivity)
+        CoroutineScope(Dispatchers.IO).launch {
+            com.example.ayahflow.ui.widget.AyahWidget()
+                .updateAll(this@MainActivity)
         }
     }
 }
